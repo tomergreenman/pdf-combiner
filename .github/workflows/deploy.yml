@@ -1,0 +1,57 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deployment at a time; a newer push supersedes an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # PWA icons are committed, but regenerate them so CI is self-contained.
+      - run: npm run icons
+
+      - run: npm run build
+        env:
+          # Project site lives at /<repo>/ — must match the repo name.
+          DEPLOY_BASE: /pdf-combiner/
+          # Lightweight access gate. This is friction, not real security: the
+          # built JS is public, so a weak passphrase is trivially recovered from
+          # the hash. To change it, run `npm run hash-password -- "new phrase"`
+          # and update ACCESS_HASH below (or set a repo secret named ACCESS_HASH).
+          VITE_ACCESS_GATE: "on"
+          VITE_ACCESS_HASH: ${{ secrets.ACCESS_HASH || '211fde622931a631732dfa6b91aa7ca8c7440909b66f71f0f2a01f1fcd665aa4' }}
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
