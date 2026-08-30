@@ -1,15 +1,27 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PageItem } from '../types';
+import { MovePositionControl } from './MovePositionControl';
 
 interface Props {
   page: PageItem;
   index: number;
+  total: number;
   onRotate: (id: string) => void;
   onRemove: (id: string) => void;
+  onMove: (id: string, target: number) => void;
+  onOpenPreview: (id: string) => void;
 }
 
-export function PageCard({ page, index, onRotate, onRemove }: Props) {
+export function PageCard({
+  page,
+  index,
+  total,
+  onRotate,
+  onRemove,
+  onMove,
+  onOpenPreview,
+}: Props) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: page.id });
 
@@ -35,7 +47,11 @@ export function PageCard({ page, index, onRotate, onRemove }: Props) {
       className={`page-card${isDragging ? ' dragging' : ''}`}
     >
       <div className="page-card-head">
-        <span className="page-index">{index + 1}</span>
+        <MovePositionControl
+          position={index + 1}
+          total={total}
+          onMove={(target) => onMove(page.id, target)}
+        />
         <button
           type="button"
           className="drag-handle"
@@ -51,7 +67,12 @@ export function PageCard({ page, index, onRotate, onRemove }: Props) {
         </button>
       </div>
 
-      <div className="thumb-frame">
+      <button
+        type="button"
+        className="thumb-frame thumb-open"
+        onClick={() => onOpenPreview(page.id)}
+        aria-label={`Enlarge preview of ${label}`}
+      >
         {page.thumbnailPending ? (
           <div className="thumb-skeleton" aria-label="Rendering preview" />
         ) : page.thumbnail ? (
@@ -65,7 +86,15 @@ export function PageCard({ page, index, onRotate, onRemove }: Props) {
         ) : (
           <div className="thumb-missing">No preview</div>
         )}
-      </div>
+        <span className="thumb-zoom" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24">
+            <path
+              fill="currentColor"
+              d="M10 4a6 6 0 1 0 3.9 10.5l4.8 4.8 1.4-1.4-4.8-4.8A6 6 0 0 0 10 4Zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8Zm-1 1v2H7v2h2v2h2v-2h2V9h-2V7H9Z"
+            />
+          </svg>
+        </span>
+      </button>
 
       <p className="page-label" title={label}>
         {label}

@@ -11,8 +11,16 @@ files never leave the device. No backend, no accounts.
 - Every file is **flattened into individual pages**: a 10-page PDF becomes 10 entries,
   each image becomes 1. You reorder the flat page list, not files.
 - **Thumbnail preview** for every page (PDF pages rendered with pdf.js).
+- **Enlarge a page** — tap any thumbnail for a full-screen preview rendered at high
+  resolution. Page through with the arrows / arrow keys / swipe, and rotate or remove
+  from inside the preview.
 - **Drag-and-drop reordering** across the whole list, freely interleaving pages from
   different sources. Works with mouse, touch, and keyboard.
+- **Jump to position** — tap a page's number badge for a popover to send it to a typed
+  position (or "To start" / "To end"), for when dragging across a long list is impractical.
+- **Grid or list view** — toggle between the thumbnail grid and a compact single-column
+  list that's easier to scan and reorder when there are many pages. The choice is
+  remembered per device. Drag and jump-to-position work in both.
 - **Per-page rotation** in 90° steps. Rotation is *added to* any rotation already
   embedded in the source PDF page (never overwritten) and applied only on export.
 - **Remove** individual pages before export.
@@ -23,7 +31,7 @@ files never leave the device. No backend, no accounts.
 ## Tech
 
 React + TypeScript + Vite · [pdf-lib](https://pdf-lib.js.org/) (build output) ·
-[pdf.js](https://mozilla.github.io/pdf.js/) (thumbnails) ·
+[pdf.js](https://mozilla.github.io/pdf.js/) (thumbnails & preview) ·
 [dnd-kit](https://dndkit.com/) (touch + mouse reorder) ·
 [vite-plugin-pwa](https://vite-pwa-org.netlify.app/) (manifest + service worker).
 

@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { arrayMove } from '@dnd-kit/sortable';
 import { Dropzone } from './components/Dropzone';
 import { PageGrid } from './components/PageGrid';
+import { PageList } from './components/PageList';
+import { ViewToggle, ViewMode } from './components/ViewToggle';
 import { Toolbar } from './components/Toolbar';
 import { ProgressOverlay } from './components/ProgressOverlay';
+import { PagePreviewModal } from './components/PagePreviewModal';
 import { loadFiles } from './lib/loadFiles';
 import { renderThumbnails } from './lib/renderThumbnail';
 import { exportMergedPdf, ExportProgress } from './lib/exportPdf';
@@ -14,10 +18,31 @@ type Busy =
   | { kind: 'parsing' }
   | { kind: 'exporting'; progress: ExportProgress };
 
+const VIEW_KEY = 'pm_view_mode';
+
+function loadViewMode(): ViewMode {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'list' ? 'list' : 'grid';
+  } catch {
+    return 'grid';
+  }
+}
+
 export function MergerApp() {
   const [pages, setPages] = useState<PageItem[]>([]);
   const [busy, setBusy] = useState<Busy>({ kind: 'idle' });
   const [toast, setToast] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+
+  const changeViewMode = useCallback((mode: ViewMode) => {
+    setViewMode(mode);
+    try {
+      localStorage.setItem(VIEW_KEY, mode);
+    } catch {
+      /* private mode — preference just won't persist */
+    }
+  }, []);
 
   // Source bytes live in a ref so the export/thumbnail helpers get a stable map
   // without forcing re-renders.
@@ -79,9 +104,31 @@ export function MergerApp() {
     setPages((prev) => prev.filter((p) => p.id !== id));
   }, []);
 
+  /** Remove from inside the preview modal, stepping to a neighbouring page. */
+  const removeFromPreview = useCallback(
+    (id: string) => {
+      const i = pages.findIndex((p) => p.id === id);
+      setPreviewId(pages[i + 1]?.id ?? pages[i - 1]?.id ?? null);
+      removePage(id);
+    },
+    [pages, removePage],
+  );
+
+  /** Jump a page to a 1-based target position (used by the number-badge popover). */
+  const movePage = useCallback((id: string, target: number) => {
+    setPages((prev) => {
+      const from = prev.findIndex((p) => p.id === id);
+      if (from === -1) return prev;
+      const to = Math.min(Math.max(1, Math.round(target)), prev.length) - 1;
+      if (to === from) return prev;
+      return arrayMove(prev, from, to);
+    });
+  }, []);
+
   const clearAll = useCallback(() => {
     if (!confirm('Remove all pages?')) return;
     livePageIds.current.clear();
+    setPreviewId(null);
     setPages([]);
     sourcesRef.current.clear();
   }, []);
@@ -112,13 +159,29 @@ export function MergerApp() {
 
       {hasPages ? (
         <>
-          <Dropzone onFiles={addFiles} compact />
-          <PageGrid
-            pages={pages}
-            onReorder={setPages}
-            onRotate={rotatePage}
-            onRemove={removePage}
-          />
+          <div className="page-area-bar">
+            <Dropzone onFiles={addFiles} compact />
+            <ViewToggle mode={viewMode} onChange={changeViewMode} />
+          </div>
+          {viewMode === 'grid' ? (
+            <PageGrid
+              pages={pages}
+              onReorder={setPages}
+              onRotate={rotatePage}
+              onRemove={removePage}
+              onMove={movePage}
+              onOpenPreview={setPreviewId}
+            />
+          ) : (
+            <PageList
+              pages={pages}
+              onReorder={setPages}
+              onRotate={rotatePage}
+              onRemove={removePage}
+              onMove={movePage}
+              onOpenPreview={setPreviewId}
+            />
+          )}
         </>
       ) : (
         <div className="empty-state">
@@ -151,6 +214,18 @@ export function MergerApp() {
         <div className="toast" role="status">
           {toast}
         </div>
+      )}
+
+      {previewId && pages.some((p) => p.id === previewId) && (
+        <PagePreviewModal
+          pages={pages}
+          currentId={previewId}
+          getSource={getSource}
+          onClose={() => setPreviewId(null)}
+          onNavigate={setPreviewId}
+          onRotate={rotatePage}
+          onRemove={removeFromPreview}
+        />
       )}
     </div>
   );

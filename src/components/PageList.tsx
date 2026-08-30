@@ -1,6 +1,6 @@
-import { rectSortingStrategy } from '@dnd-kit/sortable';
+import { verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { PageItem } from '../types';
-import { PageCard } from './PageCard';
+import { PageRow } from './PageRow';
 import { SortablePages } from './SortablePages';
 
 interface Props {
@@ -12,7 +12,7 @@ interface Props {
   onOpenPreview: (id: string) => void;
 }
 
-export function PageGrid({
+export function PageList({
   pages,
   onReorder,
   onRotate,
@@ -21,10 +21,10 @@ export function PageGrid({
   onOpenPreview,
 }: Props) {
   return (
-    <SortablePages pages={pages} strategy={rectSortingStrategy} onReorder={onReorder}>
-      <ul className="page-grid">
+    <SortablePages pages={pages} strategy={verticalListSortingStrategy} onReorder={onReorder}>
+      <ol className="page-rows">
         {pages.map((page, i) => (
-          <PageCard
+          <PageRow
             key={page.id}
             page={page}
             index={i}
@@ -35,7 +35,7 @@ export function PageGrid({
             onOpenPreview={onOpenPreview}
           />
         ))}
-      </ul>
+      </ol>
     </SortablePages>
   );
 }
